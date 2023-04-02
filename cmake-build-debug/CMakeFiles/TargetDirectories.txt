@@ -1,4 +1,0 @@
-/Users/ethan/Documents/Coding/GarbageContainer/cmake-build-debug/CMakeFiles/container-explorer.dir
-/Users/ethan/Documents/Coding/GarbageContainer/cmake-build-debug/CMakeFiles/container-explorer-tests.dir
-/Users/ethan/Documents/Coding/GarbageContainer/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/ethan/Documents/Coding/GarbageContainer/cmake-build-debug/CMakeFiles/rebuild_cache.dir
