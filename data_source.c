@@ -34,6 +34,12 @@ struct data_source {
     size_t paths_count;
 };
 
+typedef struct {
+    const char *id;
+    double distance;
+} Neighbor;
+
+
 static struct data_source *data_source;
 
 static char *readline(FILE *file) {
@@ -315,18 +321,32 @@ const char *get_path_distance(size_t line_index) {
     return data_source->paths[line_index][PATH_DISTANCE];
 }
 
-void print_containers(void) {
+Neighbor *find_neighbors(const char *given_container_id, size_t *neighbors_count) {
+    Neighbor *neighbors = NULL;
+    *neighbors_count = 0;
 
+    for (size_t i = 0; i < data_source->paths_count; i++) {
+        const char *container_a_id = get_path_a_id(i);
+        const char *container_b_id = get_path_b_id(i);
+
+        if (strcmp(given_container_id, container_a_id) == 0 ||
+            strcmp(given_container_id, container_b_id) == 0) {
+            const char *neighbor_id = strcmp(given_container_id, container_a_id) == 0 ? container_b_id : container_a_id;
+            double distance = strtod(get_path_distance(i), NULL);
+
+            neighbors = realloc(neighbors, (*neighbors_count + 1) * sizeof(Neighbor));
+            neighbors[*neighbors_count].id = neighbor_id;
+            neighbors[*neighbors_count].distance = distance;
+            (*neighbors_count)++;
+        }
+    }
+
+    return neighbors; // Caller should free the memory allocated for neighbors
+}
+
+
+void print_containers(void) {
     for (int i = 0; i < data_source->containers_count; i++) {
-//        containers[i]->id = data_source->containers[i][0];
-//        containers[i]->x = strtod(data_source->containers[i][1], NULL);
-//        containers[i]->y = strtod(data_source->containers[i][2], NULL);
-//        containers[i]->waste_type = data_source->containers[i][3];
-//        containers[i]->capacity = strtod(data_source->containers[i][4], NULL);
-//        containers[i]->name = data_source->containers[i][5];
-//        containers[i]->street = data_source->containers[i][6];
-//        containers[i]->number = data_source->containers[i][7];
-//        containers[i]->is_public = data_source->containers[i][8];
         printf("ID: ");
         printf(data_source->containers[i][0]); // ID
         printf(", ");
@@ -338,16 +358,17 @@ void print_containers(void) {
         printf(", ");
         printf("Address: ");
         printf(data_source->containers[i][6]); // Street
-        //TODO Implement Neighbors
-//        printf(data_source->containers[i][7]); // Descriptive Number
-//        printf(data_source->containers[i][5]); // Container Name
-//        printf(data_source->containers[i][1]); // Latitude
-//        printf(" ");
-//        printf(data_source->containers[i][2]); // Longitude
-//        printf(" ");
-//        printf(" ");
-//        printf(" ");
-//        printf(data_source->containers[i][8]); // Public Access?
+        printf(", ");
+        printf("Neighbors: ");
+        size_t neighbors_count;
+        Neighbor *neighbors = find_neighbors(data_source->containers[i][0], &neighbors_count);
+        for (size_t j = 0; j < neighbors_count; j++) {
+            printf("%s", neighbors[j].id);
+            if (j < neighbors_count - 1) {
+                printf(" ");
+            }
+        }
+        free(neighbors);
         printf("\n");
     }
 }
