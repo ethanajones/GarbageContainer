@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include "container.h"
 
 // Container CSV column header
 #define CONTAINER_COLUMNS_COUNT 9
@@ -25,8 +26,7 @@
 #define PATH_B 1
 #define PATH_DISTANCE 2
 
-struct data_source
-{
+struct data_source {
     char ***containers;
     size_t containers_count;
 
@@ -36,8 +36,7 @@ struct data_source
 
 static struct data_source *data_source;
 
-static char *readline(FILE *file)
-{
+static char *readline(FILE *file) {
     assert(file != NULL);
 
     size_t line_size = 32;
@@ -75,8 +74,7 @@ static char *readline(FILE *file)
     return line;
 }
 
-static void free_pointer_array(void **array, size_t size)
-{
+static void free_pointer_array(void **array, size_t size) {
     assert(array != NULL);
 
     for (size_t index = 0; index < size; index++) {
@@ -86,8 +84,7 @@ static void free_pointer_array(void **array, size_t size)
     free(array);
 }
 
-static void free_splitted_lines(char ***lines, int column_count)
-{
+static void free_splitted_lines(char ***lines, int column_count) {
     assert(lines != NULL);
 
     for (int index = 0; lines[index] != NULL; index++) {
@@ -97,11 +94,10 @@ static void free_splitted_lines(char ***lines, int column_count)
     free(lines);
 }
 
-static char **split_csv_line(char *line, size_t expected_count)
-{
+static char **split_csv_line(char *line, size_t expected_count) {
     assert(line != NULL);
 
-    char **splitted_line = calloc(expected_count + 1, sizeof(char*));
+    char **splitted_line = calloc(expected_count + 1, sizeof(char *));
     if (splitted_line == NULL) {
         return NULL;
     }
@@ -127,7 +123,7 @@ static char **split_csv_line(char *line, size_t expected_count)
         strcpy(splitted_line[index], token);
 
         if (line_length > parsed_length
-                && strchr(line + parsed_length, ',') == line + parsed_length) {
+            && strchr(line + parsed_length, ',') == line + parsed_length) {
             token = "";
         } else {
             token = strtok(NULL, ",");
@@ -142,8 +138,7 @@ static char **split_csv_line(char *line, size_t expected_count)
     return splitted_line;
 }
 
-static char ***parse_csv(const char *path, int column_count)
-{
+static char ***parse_csv(const char *path, int column_count) {
     assert(path != NULL);
 
     FILE *csv_file = fopen(path, "r");
@@ -199,8 +194,7 @@ static char ***parse_csv(const char *path, int column_count)
     return lines;
 }
 
-static size_t count_lines(void **lines)
-{
+static size_t count_lines(void **lines) {
     size_t lines_count = 0;
     while (lines[lines_count] != NULL) {
         lines_count++;
@@ -208,13 +202,11 @@ static size_t count_lines(void **lines)
     return lines_count;
 }
 
-bool init_data_source(const char *containers_path, const char *paths_path)
-{
+bool init_data_source(const char *containers_path, const char *paths_path) {
     data_source = malloc(sizeof(struct data_source));
     if (data_source == NULL) {
         return false;
     }
-
     data_source->containers = parse_csv(containers_path, CONTAINER_COLUMNS_COUNT);
     if (data_source->containers == NULL) {
         free(data_source);
@@ -233,106 +225,129 @@ bool init_data_source(const char *containers_path, const char *paths_path)
     return true;
 }
 
-void destroy_data_source(void)
-{
+void destroy_data_source(void) {
     free_splitted_lines(data_source->containers, CONTAINER_COLUMNS_COUNT);
     free_splitted_lines(data_source->paths, PATH_COLUMNS_COUNT);
     free(data_source);
 }
 
-const char *get_container_id(size_t line_index)
-{
+const char *get_container_id(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_ID];
 }
 
-const char *get_container_x(size_t line_index)
-{
+const char *get_container_x(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_X];
 }
 
-const char *get_container_y(size_t line_index)
-{
+const char *get_container_y(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_Y];
 }
 
-const char *get_container_waste_type(size_t line_index)
-{
+const char *get_container_waste_type(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_WASTE_TYPE];
 }
 
-const char *get_container_capacity(size_t line_index)
-{
+const char *get_container_capacity(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_CAPACITY];
 }
 
-const char *get_container_name(size_t line_index)
-{
+const char *get_container_name(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_NAME];
 }
 
-const char *get_container_street(size_t line_index)
-{
+const char *get_container_street(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_STREET];
 }
 
-const char *get_container_number(size_t line_index)
-{
+const char *get_container_number(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_NUMBER];
 }
 
-const char *get_container_public(size_t line_index)
-{
+const char *get_container_public(size_t line_index) {
     if (line_index >= data_source->containers_count) {
         return NULL;
     }
     return data_source->containers[line_index][CONTAINER_PUBLIC];
 }
 
-const char *get_path_a_id(size_t line_index)
-{
+const char *get_path_a_id(size_t line_index) {
     if (line_index >= data_source->paths_count) {
         return NULL;
     }
     return data_source->paths[line_index][PATH_A];
 }
 
-const char *get_path_b_id(size_t line_index)
-{
+const char *get_path_b_id(size_t line_index) {
     if (line_index >= data_source->paths_count) {
         return NULL;
     }
     return data_source->paths[line_index][PATH_B];
 }
 
-const char *get_path_distance(size_t line_index)
-{
+const char *get_path_distance(size_t line_index) {
     if (line_index >= data_source->paths_count) {
         return NULL;
     }
     return data_source->paths[line_index][PATH_DISTANCE];
 }
 
+void print_containers(void) {
+
+    for (int i = 0; i < data_source->containers_count; i++) {
+//        containers[i]->id = data_source->containers[i][0];
+//        containers[i]->x = strtod(data_source->containers[i][1], NULL);
+//        containers[i]->y = strtod(data_source->containers[i][2], NULL);
+//        containers[i]->waste_type = data_source->containers[i][3];
+//        containers[i]->capacity = strtod(data_source->containers[i][4], NULL);
+//        containers[i]->name = data_source->containers[i][5];
+//        containers[i]->street = data_source->containers[i][6];
+//        containers[i]->number = data_source->containers[i][7];
+//        containers[i]->is_public = data_source->containers[i][8];
+        printf("ID: ");
+        printf(data_source->containers[i][0]); // ID
+        printf(", ");
+        printf("Type: ");
+        printf(data_source->containers[i][3]); // Type
+        printf(", ");
+        printf("Capacity: ");
+        printf(data_source->containers[i][4]); // Container Capacity
+        printf(", ");
+        printf("Address: ");
+        printf(data_source->containers[i][6]); // Street
+        //TODO Implement Neighbors
+//        printf(data_source->containers[i][7]); // Descriptive Number
+//        printf(data_source->containers[i][5]); // Container Name
+//        printf(data_source->containers[i][1]); // Latitude
+//        printf(" ");
+//        printf(data_source->containers[i][2]); // Longitude
+//        printf(" ");
+//        printf(" ");
+//        printf(" ");
+//        printf(data_source->containers[i][8]); // Public Access?
+        printf("\n");
+    }
+}

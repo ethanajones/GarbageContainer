@@ -33,7 +33,7 @@ set(EXECUTABLE container-explorer)
 set(EXECUTABLE_TESTS container-explorer-tests)
 
 # Executable
-add_executable(${EXECUTABLE} ${SOURCES} main.c)
+add_executable(${EXECUTABLE} ${SOURCES} main.c container.h container.c)
 
 # Tests
 add_definitions(-DCUT -DWRAP_INDIRECT)

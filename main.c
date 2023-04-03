@@ -1,16 +1,21 @@
 #include <stdlib.h>
+#include "data_source.h"
+#include "container.h"
 
 // TODO: [Optional] Think about an appropriate division of the solution into files.
 //                  e.g. Move data loading and validating to another .c file.
 
-#include "data_source.h" // TODO: Read the content of this file.
+// TODO: Read the content of this file.
 
 int main(int argc, char *argv[])
 {
     // TODO: Read and validate options.
 
     // This is only a demo, you should probably move the following line somewhere else.
-    init_data_source("path/to/containers/file.csv", "path/to/paths/file.csv");
+
+    init_data_source(argv[1], argv[2]);
+    print_containers();
+
 
     // TODO: Save data to your own structures.
 

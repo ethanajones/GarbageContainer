@@ -172,4 +172,6 @@ const char *get_path_b_id(size_t line_index);
  */
 const char *get_path_distance(size_t line_index);
 
+void print_containers(void);
+
 #endif // DATA_SOURCE_H
