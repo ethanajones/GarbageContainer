@@ -172,6 +172,18 @@ const char *get_path_b_id(size_t line_index);
  */
 const char *get_path_distance(size_t line_index);
 
-void print_containers(void);
+// Add the following structure
+typedef struct Filters {
+    char waste_type[7];
+    int capacity_min;
+    int capacity_max;
+    const char *containers_path;
+    const char *paths_path;
+} Filters;
+
+// Update the function prototype
+void print_containers(Filters filters);
+
+Filters parse_args(int argc, char *argv[]);
 
 #endif // DATA_SOURCE_H

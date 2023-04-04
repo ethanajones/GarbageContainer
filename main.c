@@ -3,8 +3,9 @@
 
 int main(int argc, char *argv[])
 {
-    init_data_source(argv[1], argv[2]);
-    print_containers();
+    Filters filters = parse_args(argc, argv);
+    init_data_source(filters.containers_path, filters.paths_path);
+    print_containers(filters);
     destroy_data_source();
     return EXIT_SUCCESS;
 }

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
 #include "container.h"
 
 // Container CSV column header
@@ -321,6 +322,41 @@ const char *get_path_distance(size_t line_index) {
     return data_source->paths[line_index][PATH_DISTANCE];
 }
 
+Filters parse_args(int argc, char *argv[]) {
+    Filters filters = {"", 0, 0, NULL, NULL};
+    int opt;
+
+    while ((opt = getopt(argc, argv, "t:c:p")) != -1) {
+        switch (opt) {
+            case 't':
+                strncpy(filters.waste_type, optarg, sizeof(filters.waste_type));
+                filters.waste_type[sizeof(filters.waste_type) - 2] = '\0'; // Ensure null termination
+                break;
+            case 'c':
+                sscanf(optarg, "%d-%d", &filters.capacity_min, &filters.capacity_max);
+                break;
+            case 'p':
+                // Add support for public filter if required
+                break;
+            default:
+                fprintf(stderr, "Usage: %s [-t waste_type] [-c min_capacity-max_capacity] containers_file paths_file\n",
+                        argv[0]);
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    if (optind + 1 >= argc) {
+        fprintf(stderr, "Expected containers_file and paths_file arguments\n");
+        exit(EXIT_FAILURE);
+    }
+
+    filters.containers_path = argv[optind];
+    filters.paths_path = argv[optind + 1];
+
+    return filters;
+}
+
+
 Neighbor *find_neighbors(const char *given_container_id, size_t *neighbors_count) {
     Neighbor *neighbors = NULL;
     *neighbors_count = 0;
@@ -345,30 +381,65 @@ Neighbor *find_neighbors(const char *given_container_id, size_t *neighbors_count
 }
 
 
-void print_containers(void) {
+void print_containers(Filters filters) {
     for (int i = 0; i < data_source->containers_count; i++) {
-        printf("ID: ");
-        printf(data_source->containers[i][0]); // ID
-        printf(", ");
-        printf("Type: ");
-        printf(data_source->containers[i][3]); // Type
-        printf(", ");
-        printf("Capacity: ");
-        printf(data_source->containers[i][4]); // Container Capacity
-        printf(", ");
-        printf("Address: ");
-        printf(data_source->containers[i][6]); // Street
-        printf(", ");
-        printf("Neighbors: ");
-        size_t neighbors_count;
-        Neighbor *neighbors = find_neighbors(data_source->containers[i][0], &neighbors_count);
-        for (size_t j = 0; j < neighbors_count; j++) {
-            printf("%s", neighbors[j].id);
-            if (j < neighbors_count - 1) {
-                printf(" ");
+        const char *type = data_source->containers[i][CONTAINER_WASTE_TYPE];
+        int capacity = atoi(data_source->containers[i][CONTAINER_CAPACITY]);
+
+        bool waste_type_match = false;
+        if (filters.waste_type[0] == '\0') {
+            waste_type_match = true;
+        } else {
+            switch (filters.waste_type[0]) {
+                case 'A':
+                    waste_type_match = (strcmp(type, "Plastics and Aluminium") == 0);
+                    break;
+                case 'P':
+                    waste_type_match = (strcmp(type, "Paper") == 0);
+                    break;
+                case 'B':
+                    waste_type_match = (strcmp(type, "Biodegradable waste") == 0);
+                    break;
+                case 'G':
+                    waste_type_match = (strcmp(type, "Clear glass") == 0);
+                    break;
+                case 'C':
+                    waste_type_match = (strcmp(type, "Colored glass") == 0);
+                    break;
+                case 'T':
+                    waste_type_match = (strcmp(type, "Textile") == 0);
+                    break;
             }
         }
-        free(neighbors);
-        printf("\n");
+
+        bool capacity_match = ((filters.capacity_min == 0 && filters.capacity_max == 0) ||
+                               (capacity >= filters.capacity_min && capacity <= filters.capacity_max));
+        if (waste_type_match && capacity_match) {
+            printf("ID: ");
+            printf(data_source->containers[i][0]); // ID
+            printf(", ");
+            printf("Type: ");
+            printf(data_source->containers[i][3]); // Type
+            printf(", ");
+            printf("Capacity: ");
+            printf(data_source->containers[i][4]); // Container Capacity
+            printf(", ");
+            printf("Address: ");
+            printf(data_source->containers[i][6]); // Street
+            printf(", ");
+            printf("Neighbors: ");
+            size_t neighbors_count;
+            Neighbor *neighbors = find_neighbors(data_source->containers[i][0], &neighbors_count);
+            for (size_t j = 0; j < neighbors_count; j++) {
+                printf("%s", neighbors[j].id);
+                if (j < neighbors_count - 1) {
+                    printf(" ");
+                }
+            }
+            free(neighbors);
+            printf("\n");
+        }
     }
 }
+
+
