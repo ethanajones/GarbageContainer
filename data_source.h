@@ -173,8 +173,9 @@ const char *get_path_b_id(size_t line_index);
 const char *get_path_distance(size_t line_index);
 
 // Add the following structure
-typedef struct Filters {
-    char waste_type[7];
+typedef struct {
+    char waste_types[8][3]; // Add support for multiple waste types
+    int waste_type_count;
     int capacity_min;
     int capacity_max;
     const char *containers_path;

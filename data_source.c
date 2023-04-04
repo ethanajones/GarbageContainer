@@ -323,14 +323,17 @@ const char *get_path_distance(size_t line_index) {
 }
 
 Filters parse_args(int argc, char *argv[]) {
-    Filters filters = {"", 0, 0, NULL, NULL};
+    Filters filters = {{"", "", "", "", "", "", "", ""}, 0, 0, 0, NULL, NULL};
     int opt;
 
     while ((opt = getopt(argc, argv, "t:c:p")) != -1) {
         switch (opt) {
             case 't':
-                strncpy(filters.waste_type, optarg, sizeof(filters.waste_type));
-                filters.waste_type[sizeof(filters.waste_type) - 2] = '\0'; // Ensure null termination
+                for (size_t i = 0; optarg[i] != '\0' && filters.waste_type_count < 8; ++i) {
+                    filters.waste_types[filters.waste_type_count][0] = optarg[i];
+                    filters.waste_types[filters.waste_type_count][1] = '\0';
+                    filters.waste_type_count++;
+                }
                 break;
             case 'c':
                 sscanf(optarg, "%d-%d", &filters.capacity_min, &filters.capacity_max);
@@ -387,28 +390,34 @@ void print_containers(Filters filters) {
         int capacity = atoi(data_source->containers[i][CONTAINER_CAPACITY]);
 
         bool waste_type_match = false;
-        if (filters.waste_type[0] == '\0') {
+        if (filters.waste_types[0] == '\0') {
             waste_type_match = true;
         } else {
-            switch (filters.waste_type[0]) {
-                case 'A':
-                    waste_type_match = (strcmp(type, "Plastics and Aluminium") == 0);
+            for (size_t j = 0; j < filters.waste_type_count; j++) {
+                char waste_type = filters.waste_types[j][0]; // Access the first character of the waste type string
+                switch (waste_type) {
+                    case 'A':
+                        waste_type_match |= (strcmp(type, "Plastics and Aluminium") == 0);
+                        break;
+                    case 'P':
+                        waste_type_match |= (strcmp(type, "Paper") == 0);
+                        break;
+                    case 'B':
+                        waste_type_match |= (strcmp(type, "Biodegradable waste") == 0);
+                        break;
+                    case 'G':
+                        waste_type_match |= (strcmp(type, "Clear glass") == 0);
+                        break;
+                    case 'C':
+                        waste_type_match |= (strcmp(type, "Colored glass") == 0);
+                        break;
+                    case 'T':
+                        waste_type_match |= (strcmp(type, "Textile") == 0);
+                        break;
+                }
+                if (waste_type_match) {
                     break;
-                case 'P':
-                    waste_type_match = (strcmp(type, "Paper") == 0);
-                    break;
-                case 'B':
-                    waste_type_match = (strcmp(type, "Biodegradable waste") == 0);
-                    break;
-                case 'G':
-                    waste_type_match = (strcmp(type, "Clear glass") == 0);
-                    break;
-                case 'C':
-                    waste_type_match = (strcmp(type, "Colored glass") == 0);
-                    break;
-                case 'T':
-                    waste_type_match = (strcmp(type, "Textile") == 0);
-                    break;
+                }
             }
         }
 
@@ -441,5 +450,3 @@ void print_containers(Filters filters) {
         }
     }
 }
-
-
