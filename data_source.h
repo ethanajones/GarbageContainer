@@ -172,7 +172,6 @@ const char *get_path_b_id(size_t line_index);
  */
 const char *get_path_distance(size_t line_index);
 
-// Add the following structure
 typedef struct {
     char waste_types[8][2];
     size_t waste_type_count;
@@ -181,12 +180,13 @@ typedef struct {
     int public_filter;
     const char *containers_path;
     const char *paths_path;
+    int special_flag;
 } Filters;
 
 
 // Update the function prototype
 void print_containers(Filters filters);
-
-Filters parse_args(int argc, char *argv[]);
+void print_locations(void);
+void print_stations(void);
 
 #endif // DATA_SOURCE_H

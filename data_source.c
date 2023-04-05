@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include <math.h>
 #include "container.h"
 
 // Container CSV column header
@@ -39,6 +40,13 @@ typedef struct {
     const char *id;
     double distance;
 } Neighbor;
+
+typedef struct {
+    size_t id;
+    char *waste_types;
+    size_t *neighbors;
+    size_t neighbors_count;
+} Station;
 
 
 static struct data_source *data_source;
@@ -266,41 +274,6 @@ const char *get_container_waste_type(size_t line_index) {
     return data_source->containers[line_index][CONTAINER_WASTE_TYPE];
 }
 
-const char *get_container_capacity(size_t line_index) {
-    if (line_index >= data_source->containers_count) {
-        return NULL;
-    }
-    return data_source->containers[line_index][CONTAINER_CAPACITY];
-}
-
-const char *get_container_name(size_t line_index) {
-    if (line_index >= data_source->containers_count) {
-        return NULL;
-    }
-    return data_source->containers[line_index][CONTAINER_NAME];
-}
-
-const char *get_container_street(size_t line_index) {
-    if (line_index >= data_source->containers_count) {
-        return NULL;
-    }
-    return data_source->containers[line_index][CONTAINER_STREET];
-}
-
-const char *get_container_number(size_t line_index) {
-    if (line_index >= data_source->containers_count) {
-        return NULL;
-    }
-    return data_source->containers[line_index][CONTAINER_NUMBER];
-}
-
-const char *get_container_public(size_t line_index) {
-    if (line_index >= data_source->containers_count) {
-        return NULL;
-    }
-    return data_source->containers[line_index][CONTAINER_PUBLIC];
-}
-
 const char *get_path_a_id(size_t line_index) {
     if (line_index >= data_source->paths_count) {
         return NULL;
@@ -321,53 +294,6 @@ const char *get_path_distance(size_t line_index) {
     }
     return data_source->paths[line_index][PATH_DISTANCE];
 }
-
-Filters parse_args(int argc, char *argv[]) {
-    Filters filters = {{"", "", "", "", "", "", "", ""}, 0, 0, 0, NULL, NULL};
-    int opt;
-
-    while ((opt = getopt(argc, argv, "t:c:p:")) != -1) {
-        switch (opt) {
-            case 't':
-                for (size_t i = 0; optarg[i] != '\0' && filters.waste_type_count < 8; ++i) {
-                    filters.waste_types[filters.waste_type_count][0] = optarg[i];
-                    filters.waste_types[filters.waste_type_count][1] = '\0';
-                    filters.waste_type_count++;
-                }
-                break;
-            case 'c':
-                sscanf(optarg, "%d-%d", &filters.capacity_min, &filters.capacity_max);
-                break;
-            case 'p':
-                // Modify support for public filter
-                if (optarg[0] == 'N') {
-                    filters.public_filter = 1;
-                } else if (optarg[0] == 'Y') {
-                    filters.public_filter = -1;
-                } else {
-                    fprintf(stderr, "Invalid value for public_filter. Use 'Y' or 'N'.\n");
-                    exit(EXIT_FAILURE);
-                }
-                break;
-            default:
-                fprintf(stderr,
-                        "Usage: %s [-t waste_type] [-c min_capacity-max_capacity] [-p public_filter] containers_file paths_file\n",
-                        argv[0]);
-                exit(EXIT_FAILURE);
-        }
-    }
-
-    if (optind + 1 >= argc) {
-        fprintf(stderr, "Expected containers_file and paths_file arguments\n");
-        exit(EXIT_FAILURE);
-    }
-
-    filters.containers_path = argv[optind];
-    filters.paths_path = argv[optind + 1];
-
-    return filters;
-}
-
 
 Neighbor *find_neighbors(const char *given_container_id, size_t *neighbors_count) {
     Neighbor *neighbors = NULL;
@@ -461,3 +387,135 @@ void print_containers(Filters filters) {
         }
     }
 }
+
+int compare_size_t(const void *a, const void *b) {
+    size_t arg1 = *(const size_t *) a;
+    size_t arg2 = *(const size_t *) b;
+    if (arg1 < arg2) return -1;
+    if (arg1 > arg2) return 1;
+    return 0;
+}
+
+void print_stations(void) {
+    Station *stations = NULL;
+    size_t stations_count = 0;
+
+    for (size_t i = 0; i < data_source->containers_count; i++) {
+        const char *container_id = get_container_id(i);
+        const char *waste_type = get_container_waste_type(i);
+        double container_x = strtod(get_container_x(i), NULL);
+        double container_y = strtod(get_container_y(i), NULL);
+
+        bool found_existing_station = false;
+        for (size_t j = 0; j < stations_count && !found_existing_station; j++) {
+            const char *station_container_id = get_container_id(stations[j].id - 1);
+            double station_container_x = strtod(get_container_x(stations[j].id - 1), NULL);
+            double station_container_y = strtod(get_container_y(stations[j].id - 1), NULL);
+
+            double x_diff = station_container_x - container_x;
+            double y_diff = station_container_y - container_y;
+            double distance = sqrt(x_diff * x_diff + y_diff * y_diff);
+
+            if (round(distance * pow(10, 14)) == 0) {
+                found_existing_station = true;
+
+                // Add waste_type to station waste_types if it's not already present
+                if (!strchr(stations[j].waste_types, waste_type[0])) {
+                    size_t len = strlen(stations[j].waste_types);
+                    stations[j].waste_types = realloc(stations[j].waste_types, len + 2);
+                    stations[j].waste_types[len] = waste_type[0];
+                    stations[j].waste_types[len + 1] = '\0';
+                }
+                // Add neighbors to the existing station
+                size_t neighbors_count;
+                Neighbor *neighbors = find_neighbors(container_id, &neighbors_count);
+                for (size_t k = 0; k < neighbors_count; k++) {
+                    const char *neighbor_id = neighbors[k].id;
+                    size_t neighbor_station_id = 0;
+                    for (size_t l = 0; l < stations_count; l++) {
+                        if (strcmp(get_container_id(stations[l].id - 1), neighbor_id) == 0) {
+                            neighbor_station_id = stations[l].id;
+                            break;
+                        }
+                    }
+                    if (neighbor_station_id > 0) {
+                        bool already_added = false;
+                        for (size_t l = 0; l < stations[j].neighbors_count; l++) {
+                            if (stations[j].neighbors[l] == neighbor_station_id) {
+                                already_added = true;
+                                break;
+                            }
+                        }
+                        if (!already_added) {
+                            stations[j].neighbors = realloc(stations[j].neighbors,
+                                                            (stations[j].neighbors_count + 1) * sizeof(size_t));
+                            stations[j].neighbors[stations[j].neighbors_count] = neighbor_station_id;
+                            stations[j].neighbors_count++;
+                        }
+                    }
+                }
+                free(neighbors);
+            }
+        }
+        if (!found_existing_station) {
+            // Create a new station
+            stations_count++;
+            stations = realloc(stations, stations_count * sizeof(Station));
+            Station *new_station = &stations[stations_count - 1];
+            new_station->id = stations_count;
+            new_station->waste_types = malloc(2 * sizeof(char));
+            new_station->waste_types[0] = waste_type[0];
+            new_station->waste_types[1] = '\0';
+            new_station->neighbors_count = 0;
+            new_station->neighbors = NULL;
+
+            // Add neighbors to the new station
+            size_t neighbors_count;
+            Neighbor *neighbors = find_neighbors(container_id, &neighbors_count);
+            for (size_t k = 0; k < neighbors_count; k++) {
+                const char *neighbor_id = neighbors[k].id;
+                size_t neighbor_station_id = 0;
+                for (size_t l = 0; l < stations_count - 1; l++) {
+                    if (strcmp(get_container_id(stations[l].id - 1), neighbor_id) == 0) {
+                        neighbor_station_id = stations[l].id;
+                        break;
+                    }
+                }
+
+                if (neighbor_station_id > 0) {
+                    new_station->neighbors = realloc(new_station->neighbors,
+                                                     (new_station->neighbors_count + 1) * sizeof(size_t));
+                    new_station->neighbors[new_station->neighbors_count] = neighbor_station_id;
+                    new_station->neighbors_count++;
+
+                    // Add the new station as a neighbor to the existing station
+                    Station *neighbor_station = &stations[neighbor_station_id - 1];
+                    neighbor_station->neighbors = realloc(neighbor_station->neighbors,
+                                                          (neighbor_station->neighbors_count + 1) * sizeof(size_t));
+                    neighbor_station->neighbors[neighbor_station->neighbors_count] = new_station->id;
+                    neighbor_station->neighbors_count++;
+                }
+            }
+            free(neighbors);
+        }
+    }
+    // Print stations
+    for (size_t i = 0; i < stations_count; i++) {
+        printf("%zu;%s;", stations[i].id, stations[i].waste_types);
+        qsort(stations[i].neighbors, stations[i].neighbors_count, sizeof(size_t), compare_size_t);
+        for (size_t j = 0; j < stations[i].neighbors_count; j++) {
+            printf("%zu", stations[i].neighbors[j]);
+            if (j < stations[i].neighbors_count - 1) {
+                printf(",");
+            }
+        }
+        printf("\n");
+    }
+    // Free memory
+    for (size_t i = 0; i < stations_count; i++) {
+        free(stations[i].waste_types);
+        free(stations[i].neighbors);
+    }
+    free(stations);
+}
+
