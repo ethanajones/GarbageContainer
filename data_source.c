@@ -326,7 +326,7 @@ Filters parse_args(int argc, char *argv[]) {
     Filters filters = {{"", "", "", "", "", "", "", ""}, 0, 0, 0, NULL, NULL};
     int opt;
 
-    while ((opt = getopt(argc, argv, "t:c:p")) != -1) {
+    while ((opt = getopt(argc, argv, "t:c:p:")) != -1) {
         switch (opt) {
             case 't':
                 for (size_t i = 0; optarg[i] != '\0' && filters.waste_type_count < 8; ++i) {
@@ -339,10 +339,19 @@ Filters parse_args(int argc, char *argv[]) {
                 sscanf(optarg, "%d-%d", &filters.capacity_min, &filters.capacity_max);
                 break;
             case 'p':
-                // Add support for public filter if required
+                // Modify support for public filter
+                if (optarg[0] == 'N') {
+                    filters.public_filter = 1;
+                } else if (optarg[0] == 'Y') {
+                    filters.public_filter = -1;
+                } else {
+                    fprintf(stderr, "Invalid value for public_filter. Use 'Y' or 'N'.\n");
+                    exit(EXIT_FAILURE);
+                }
                 break;
             default:
-                fprintf(stderr, "Usage: %s [-t waste_type] [-c min_capacity-max_capacity] containers_file paths_file\n",
+                fprintf(stderr,
+                        "Usage: %s [-t waste_type] [-c min_capacity-max_capacity] [-p public_filter] containers_file paths_file\n",
                         argv[0]);
                 exit(EXIT_FAILURE);
         }
@@ -383,11 +392,11 @@ Neighbor *find_neighbors(const char *given_container_id, size_t *neighbors_count
     return neighbors; // Caller should free the memory allocated for neighbors
 }
 
-
 void print_containers(Filters filters) {
     for (int i = 0; i < data_source->containers_count; i++) {
         const char *type = data_source->containers[i][CONTAINER_WASTE_TYPE];
         int capacity = atoi(data_source->containers[i][CONTAINER_CAPACITY]);
+        int public_value = atoi(data_source->containers[i][CONTAINER_PUBLIC]);
 
         bool waste_type_match = false;
         if (filters.waste_types[0] == '\0') {
@@ -423,7 +432,10 @@ void print_containers(Filters filters) {
 
         bool capacity_match = ((filters.capacity_min == 0 && filters.capacity_max == 0) ||
                                (capacity >= filters.capacity_min && capacity <= filters.capacity_max));
-        if (waste_type_match && capacity_match) {
+
+        bool public_match = (filters.public_filter == -1 || public_value == filters.public_filter);
+
+        if (waste_type_match && capacity_match && public_match) {
             printf("ID: ");
             printf(data_source->containers[i][0]); // ID
             printf(", ");
@@ -435,7 +447,6 @@ void print_containers(Filters filters) {
             printf(", ");
             printf("Address: ");
             printf(data_source->containers[i][6]); // Street
-            printf(", ");
             printf("Neighbors: ");
             size_t neighbors_count;
             Neighbor *neighbors = find_neighbors(data_source->containers[i][0], &neighbors_count);

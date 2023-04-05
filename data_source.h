@@ -174,13 +174,15 @@ const char *get_path_distance(size_t line_index);
 
 // Add the following structure
 typedef struct {
-    char waste_types[8][3]; // Add support for multiple waste types
-    int waste_type_count;
+    char waste_types[8][2];
+    size_t waste_type_count;
     int capacity_min;
     int capacity_max;
+    int public_filter;
     const char *containers_path;
     const char *paths_path;
 } Filters;
+
 
 // Update the function prototype
 void print_containers(Filters filters);
